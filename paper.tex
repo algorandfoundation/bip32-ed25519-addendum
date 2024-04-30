@@ -1,6 +1,6 @@
 \title{Bip32-Ed25519++: A More Secure Hierarchical Deterministic Wallet Standard for Ed25519 Keys}
 
-\author{Chris Peikert\cite{Author1}, Yared E. Afework\cite{Author2}}
+\author{Chris Peikert\cite{Author1}, Yared Afework\cite{Author2}}
 
 \newcommand{\abstractText}{\noindent
 
@@ -16,14 +16,19 @@
 \usepackage{abstract}
 \renewcommand{\abstractnamefont}{\normalfont\bfseries}
 \renewcommand{\abstracttextfont}{\normalfont\small\itshape}
-\usepackage{lipsum}
+\usepackage{amsmath} % Add this line to define the \text command
+\usepackage{titlesec}
+\usepackage[skip=10pt]{parskip}
+
+\titleformat*{\section}{\large\bfseries}
+\titleformat*{\subsection}{\normalsize\bfseries}
 
 %%%%%%%%%%%%%%
 % References %
 %%%%%%%%%%%%%%
 
 % If changing the name of the bib file, change \bibliography{test} at the bottom
-\begin{filecontents}{test.bib}
+\begin{filecontents}{sources.bib}
 
 @misc{Author1,
   author       = "Peikert, Chris",
@@ -32,7 +37,7 @@
 
 @misc{Author2,
   author       = "Efrem Afework, Yared",
-  howpublished = "\url{mailto:yared@679labs.com}",
+  howpublished = "\url{mailto:yared.efremafework@algorand.foundation}",
 }
 
 @article{BIP32-Ed25519,
@@ -41,14 +46,6 @@
   year    = "2017",
   journal = "IEEE European Symposium on Security and Privacy Workshops (EuroS&PW)",
   note    = "\url{https://ieeexplore.ieee.org/abstract/document/7966967}",
-}
-
-@article{BIP32-Ed25519,
-  author  = "Nguyen-Dinh, Thang, et al.",
-  title   = "A Hierarchical Deterministic Wallet Using Ed25519 Digital Signature Scheme.",
-  year    = "2022",
-  journal = "International Conference on Future Data and Security Engineering",
-  note    = "\url{https://link.springer.com/chapter/10.1007/978-981-19-8069-5_16}",
 }
 
 \end{filecontents}
@@ -68,6 +65,7 @@
     \maketitle
     \begin{abstract}
       \abstractText
+      Implementing BIP32-style HD wallets for Ed25519 keys is a non-trivial task due to the non-linear key space of Ed25519. The paper BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace has seen wide adoption in the industry, but has some security issues. In this paper modifications are proposed that addresses those issues, at the cost of reducing the number of levels of child keys.
       \newline
       \newline
     \end{abstract}
@@ -77,6 +75,7 @@
 %%%%%%%%%%%
 % Article %
 %%%%%%%%%%%
+
 
 \section{Introduction}
 
@@ -90,7 +89,7 @@ Bitcoin Improvement Proposal 32 (BIP32) was introduced to provide users with a m
 
 BIP43 introduced the concept of a purpose field, claiming that the original BIP32 standard allowed for too many degrees of freedom and resulted in many wallet softwares which claimed to be BIP32 compatible but were ultimately incompatible with each other. BIP44 took this a step further and defined 5 levels levels in the BIP32 path:
 
-m / purpose' / coin_type' / account' / change / address_index
+$m / \text{purpose}' / \text{coin\_type}' / \text{account}' / \text{change} / \text{key\_index}$
 
 The apostrophe indicates that the field is hardened, meaning that the child key is derived in a way that prevents the parent public key from being derived from the child public key, or the sibling keys of that child key.
 
@@ -98,26 +97,26 @@ This class of wallets are known as Hierarchical Determinstic Wallets, or HD Wall
 
 Other derivation schemes exist as well, such as BIP49 for P2SH nested SegWit addresses, and BIP84 for native SegWit addresses.
 
-A complementary set of documents called SatoshiLab Improvement Protocols (SLIP) also exist, maintained by SatoshiLab (the creators of the Trezor hardware wallet) and come up in the context of BIP32 wallets. E.g. SLIP10 or SLIP23. SLIP44 extended BIP44 to assign coin_type values for blockchains other than Bitcoin mainnet and testnet, e.g. 283' for Algorand.
+A complementary set of documents called SatoshiLab Improvement Protocols (SLIP) also exist, maintained by SatoshiLab (the creators of the Trezor hardware wallet) and come up in the context of BIP32 wallets. E.g. SLIP10 or SLIP23. SLIP44 extended BIP44 to assign coin type values for blockchains other than Bitcoin mainnet and testnet, e.g. $\text{283}'$ for Algorand.
 
-\subsection{Elliptic Curves and their Key Spaces}
+\subsection{Elliptic curves and their key spaces}
 
 Bitcoin relies on the Secp256k1 elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k]$ (mod the order of the finite field).
 
 An alternate elliptic curve standard for digital signatures is Ed25519. It is used by a number of blockchains such as Algorand, Cardano, Nano, Monero and more. Polkadot uses a variant called Schnorrkel/Ristretto x25519 ("sr25519") and Trezor offers it alongside other curves.
 
-Ed25519 has a number of advantages, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered).
+Ed25519 has a number of advanta\usepackage[skip=10pt]{parskip}ges, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered).
 
 Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits. Of the 32 byte private key:
 
 - Bits 0, 1, 2:  set to 0, ensuring that the key is a multiple of 8 and avoiding small subgroup attacks.
-- Bit 254: set to 1, to ensuring the Montgommery ladder computation used in scalar multiplication takes constant time.
-- Bit 244: set to 0, ensuring the key is in the range of the field order (2^255 - 19).
+- Bit 255: set to 1, to ensuring the Montgommery ladder computation used in scalar multiplication takes constant time.
+- Bit 254: set to 0, ensuring the key is in the range of the field order ($2^{255} - 19$).
 
 As a result, the key space for Ed25519 is non-linear.
 
 A paper that has seen adoption in the industry is BIP32-Ed25519
-Hierarchical Deterministic Keys over a Non-linear Keyspace cite{BIP32-Ed25519}. It extends the BIP32 standard to work with Ed25519 keys. It has been adopted by Cardano, though conforming additionally with SLIP10 to derive the initial master Ed25519 key and chain code.
+Hierarchical Deterministic Keys over a Non-linear Keyspace \cite{BIP32-Ed25519}. It extends the BIP32 standard to work with Ed25519 keys. It has been adopted by Cardano, though conforming additionally with SLIP10 to derive the initial master Ed25519 key and chain code.
 
 While solving the problem (with only minor modifications to BIP32 and working with "after-hash" private keys of Ed25519), in this paper an improvement to their method is proposed that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys.
 
@@ -135,14 +134,12 @@ The purpose of our modifications is to make derived keys less related, so that t
 
 In this paper we have proposed a modification to the BIP32-Ed25519 standard that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys. We have shown that this modification provides a significant improvement in security, while still providing a sufficient number of child keys for most applications.
 
-\lipsum[1]
-
 %%%%%%%%%%%%%%
 % References %
 %%%%%%%%%%%%%%
 
 \nocite{*}
 \bibliographystyle{plain}
-\bibliography{test}
+\bibliography{sources}
 
 \end{document}
