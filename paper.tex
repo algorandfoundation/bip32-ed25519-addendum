@@ -1,6 +1,6 @@
 \title{Bip32-Ed25519++: A More Secure Hierarchical Deterministic Wallet Standard for Ed25519 Keys}
 
-\author{Chris Peikert\cite{Author1}, Yared Afework\cite{Author2}}
+\author{Chris Peikert\cite{Author1}, Yared Efrem Afework\cite{Author2}, Bruno Martins\cite{Author3}}
 
 \newcommand{\abstractText}{\noindent
 
@@ -22,33 +22,6 @@
 
 \titleformat*{\section}{\large\bfseries}
 \titleformat*{\subsection}{\normalsize\bfseries}
-
-%%%%%%%%%%%%%%
-% References %
-%%%%%%%%%%%%%%
-
-% If changing the name of the bib file, change \bibliography{test} at the bottom
-\begin{filecontents}{sources.bib}
-
-@misc{Author1,
-  author       = "Peikert, Chris",
-  howpublished = "\url{mailto:cpeikert@umich.edu}",
-}
-
-@misc{Author2,
-  author       = "Efrem Afework, Yared",
-  howpublished = "\url{mailto:yared.efremafework@algorand.foundation}",
-}
-
-@article{BIP32-Ed25519,
-  author  = "Khovratovich, Dmitry, and Law, Jason",
-  title   = "BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace",
-  year    = "2017",
-  journal = "IEEE European Symposium on Security and Privacy Workshops (EuroS&PW)",
-  note    = "\url{https://ieeexplore.ieee.org/abstract/document/7966967}",
-}
-
-\end{filecontents}
 
 % Any configuration that should be done before the end of the preamble:
 \usepackage{hyperref}
@@ -101,17 +74,19 @@ A complementary set of documents called SatoshiLab Improvement Protocols (SLIP) 
 
 \subsection{Elliptic curves and their key spaces}
 
-Bitcoin relies on the Secp256k1 elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k]$ (mod the order of the finite field).
+Bitcoin relies on the Secp256k1 elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k] mod q$ for $q$ the order of the field.
 
 An alternate elliptic curve standard for digital signatures is Ed25519. It is used by a number of blockchains such as Algorand, Cardano, Nano, Monero and more. Polkadot uses a variant called Schnorrkel/Ristretto x25519 ("sr25519") and Trezor offers it alongside other curves.
 
-Ed25519 has a number of advanta\usepackage[skip=10pt]{parskip}ges, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered).
+Ed25519 has a number of advantages, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered).
 
 Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits. Of the 32 byte private key:
 
-- Bits 0, 1, 2:  set to 0, ensuring that the key is a multiple of 8 and avoiding small subgroup attacks.
-- Bit 255: set to 1, to ensuring the Montgommery ladder computation used in scalar multiplication takes constant time.
-- Bit 254: set to 0, ensuring the key is in the range of the field order ($2^{255} - 19$).
+\begin{itemize}
+  \item Bits 0, 1, 2:  set to 0, ensuring that the key is a multiple of 8 and avoiding small subgroup attacks.
+  \item Bit 254: set to 1, to ensuring the Montgommery ladder computation used in scalar multiplication runs in constant time.
+  \item Bit 255: set to 0, ensuring the key is in the range of the field order ($2^{255} - 19$).
+\end{itemize}
 
 As a result, the key space for Ed25519 is non-linear.
 
@@ -129,6 +104,17 @@ The BIP32-Ed25519 by  proposal provides similar features for Ed25519 keys [, whi
 \section{Suggestions for Improvements}
 
 The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised. While the BIP32 approach cannot produce completely unrelated Ed25519 keys, our modifications ensure a reduction of only about 3 bits [DEPENDS ON WHICH "g" VALUE YOU CHOSE; IT'S (g-4)/2 BITS] of security in the above scenario. This is done without sacrificing the number of child keys a parent can have, and by retaining a deep enough hierarchy of keys for applications.
+
+\section{Implementations}
+
+The suggestions provided in this paper have been implemented as part of the ARC52 Bip32-Ed25519 libraries provided by the Algorand Foundation.
+
+\begin{itemize}
+  \item \href{https://github.com/algorandfoundation/bip32-ed25519-kotlin}{Kotlin}
+  \item \href{https://github.com/algorandfoundation/bip32-ed25519-swift}{Swift}
+  \item \href{https://github.com/algorandfoundation/bip32-ed25519-ts}{TypeScript}
+\end{itemize}
+
 
 \section{Conclusion}
 
