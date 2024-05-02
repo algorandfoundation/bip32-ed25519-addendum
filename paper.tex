@@ -19,6 +19,8 @@
 \usepackage{amsmath} % Add this line to define the \text command
 \usepackage{titlesec}
 \usepackage[skip=10pt]{parskip}
+\usepackage{enumitem}
+
 
 \titleformat*{\section}{\large\bfseries}
 \titleformat*{\subsection}{\normalsize\bfseries}
@@ -62,19 +64,37 @@ Bitcoin Improvement Proposal 32 (BIP32) was introduced to provide users with a m
 
 BIP43 introduced the concept of a purpose field, claiming that the original BIP32 standard allowed for too many degrees of freedom and resulted in many wallet softwares which claimed to be BIP32 compatible but were ultimately incompatible with each other. BIP44 took this a step further and defined 5 levels levels in the BIP32 path:
 
-$m / \text{purpose}' / \text{coin\_type}' / \text{account}' / \text{change} / \text{key\_index}$
+$m / \text{purpose}' / \text{coin\_type}' / \text{account}' / \text{change} / \text{key}$
 
-The apostrophe indicates that the field is hardened, meaning that the child key is derived in a way that prevents the parent public key from being derived from the child public key, or the sibling keys of that child key.
+\begin{itemize}
+  \item m: master seed
+  \item purpose': derivation path scheme (e.g., 44')
+  \item coin\_type': constant corresponding to the blockchain
+  \item account': user account
+  \item change: 0 for external addresses, 1 for internal addresses
+  \item key: address index
+\end{itemize}
+
+The apostrophe in the paths indicates that the respective field is hardened, meaning that the child key is derived in a way that prevents the parent public key from being derived from the child public key, or the sibling keys of that child key. The derivation method is different for hardened keys, requiring the parent private key.
+
+Each level has $2^{32}$ possible values. When hardening a level, the first bit is set to 1. Thus $[0, 2^{31})$ are reserved for non-hardened keys, and $[2^{31}, 2^{32})$ are reserved for hardened keys.
+
+The terms "account" and "address" are sometimes used interchangeably in casual conversation. In the HD wallet context however, a user would create a new account of application and could create a new address index for each transaction
+
+Since the indices and change levels are not hardened but the account level is, it is possible to connect sibling addresses within an account by providing the extended public key produced at the account level, but not connect different accounts with each other should the extended public key at the coin\_type be leaked. Similarly, hardening at the coin\_type level means that keys derived for one blockchain cannot be connected to keys derived for another blockchain.
 
 This class of wallets are known as Hierarchical Determinstic Wallets, or HD Wallets for short.
 
 Other derivation schemes exist as well, such as BIP49 for P2SH nested SegWit addresses, and BIP84 for native SegWit addresses.
 
-A complementary set of documents called SatoshiLab Improvement Protocols (SLIP) also exist, maintained by SatoshiLab (the creators of the Trezor hardware wallet) and come up in the context of BIP32 wallets. E.g. SLIP10 or SLIP23. SLIP44 extended BIP44 to assign coin type values for blockchains other than Bitcoin mainnet and testnet, e.g. $\text{283}'$ for Algorand.
+A complementary set of documents called SatoshiLab Improvement Protocols (SLIP) also exist, maintained by SatoshiLab (the creators of the Trezor hardware wallet) and come up in the context of BIP32 wallets. E.g. SLIP10 or SLIP23. SLIP44 extended BIP44 to assign $\text{coin\_type}$ values for blockchains other than Bitcoin mainnet and testnet, e.g. $\text{283}'$ for Algorand.
+
+Note that the schemes listed rely on 5 levels of derivation.
 
 \subsection{Elliptic curves and their key spaces}
+\label{subsec:elliptic_curves_and_their_key_spaces}
 
-Bitcoin relies on the Secp256k1 elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k] mod q$ for $q$ the order of the field.
+Bitcoin relies on the Secp256k1 elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k] \text{ mod } q$ for $q$ the order of the field.
 
 An alternate elliptic curve standard for digital signatures is Ed25519. It is used by a number of blockchains such as Algorand, Cardano, Nano, Monero and more. Polkadot uses a variant called Schnorrkel/Ristretto x25519 ("sr25519") and Trezor offers it alongside other curves.
 
@@ -90,18 +110,72 @@ Unfortunately, private keys have to be derived by hashing the seed and manipulat
 
 As a result, the key space for Ed25519 is non-linear.
 
-A paper that has seen adoption in the industry is BIP32-Ed25519
+A paper that has seen large adoption in the industry is BIP32-Ed25519
 Hierarchical Deterministic Keys over a Non-linear Keyspace \cite{BIP32-Ed25519}. It extends the BIP32 standard to work with Ed25519 keys. It has been adopted by Cardano, though conforming additionally with SLIP10 to derive the initial master Ed25519 key and chain code.
 
-While solving the problem (with only minor modifications to BIP32 and working with "after-hash" private keys of Ed25519), in this paper an improvement to their method is proposed that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys.
+TODO: add more adopters
+
+While solving the problem (with only minor modifications to BIP32 and working with "after-hash" private keys of Ed25519), certain decisions were made that result in unnecessary security degradation.
+
+In this paper an improvement to their method is proposed that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys.
 
 
 \section{Security Review}
 
-The BIP32-Ed25519 by  proposal provides similar features for Ed25519 keys [, which are widely used in <projects>]. However, in the current draft, derived private keys are somewhat closely related, in ways that can significantly degrade security. For example, if even a single "child" private key is compromised, then the security of its "parent" key degrades to only 112--114 bits. In other words, computing the parent key may become more than 64,000 times easier for the attacker. If many sibling private keys are compromised, the parent key's security is degraded even further. And the same applies to further ancestors, up to the root private key.
+While reviewing the BIP32-Ed25519 paper, two issues were identified, the first minor and the other major.
+
+\subsection{Discarding bad child private or public keys}
+
+While deriving a new private or public child key, it is possible to produce a child that is unsafe to use:
+
+\begin{itemize}
+  \item $k_L$ is divisible by the base order $n$
+  \item $A_i$ is the identity point (0, 1)
+\end{itemize}
+
+The paper states that if these happen the child must be discarded. However it does not give instructions on how to proceed with the derivation. For example, an implementer could mark the index as forbidden and increment the child index.
+
+Regardless, the likelihood of either happening is highly unlikely.
+
+\subsection{The 28 left bytes of Z }
+
+As was mentioned in \ref{subsec:elliptic_curves_and_their_key_spaces}, there is a need to ensure that bits 0, 1, 2, 3 and 255 are 0 and that bit 254 is 1 for private keys (scalars) in Ed25519.
+
+The paper's method for ensuring this is to produce the child private key respectively public key as follows:
+
+Derive $Z$ from either the parent's public key or parent's extended private key, depending on whether the child is hardened or not:
+
+$  Z \leftarrow 
+  \begin{cases} 
+  F_{c^P}(0x02||A^P||i) & i \in  [0, 2^{31}) \\
+  F_{c^P}(0x00||k^P||i) & i \in [2^{31}, 2^{32})
+  \end{cases}
+  $
+
+Truncate the 32 byte $Z$ to 28 bytes: $Z_L \leftarrow Z_{[:28]}$.
+
+Calculate, depending on choice, the child private key (scalar) or public key (corresponding to an address on the blockchain):
+
+\begin{enumerate}[label={}] 
+  \item $k_L \leftarrow \langle 8[Z_L]  + [k{_L}^P]\rangle$ 
+  \item $A_i \leftarrow A^P + [8Z_L]B$
+\end{enumerate}
 
 
-\section{Suggestions for Improvements}
+The calculations of $k_R$, necessary to produce the extended private key $k = (k_L, k_R)$, and the child chain code $c_i$, necessary to serve as the key for the HMAC-512 function $F$ (and be part of the extended public key $(A_i, c_i)$); have been omitted for brevity. $B$ represents the base point of the curve and $i$ a little-endian 4-byte string.
+
+By truncating $Z$ to 28 bytes and then multiplying by 8, the authors ensure that the scalar is a multiple of 8 and that bit 255 is 0. When $k{_L}^P$ is added, it contributes with a 1 on bit 254.
+
+Note that as part of initial conversion from seed to master key $\tilde{k}$, only those $\tilde{k}$ that produce a $k_L$ whose bit 253 is 0 are admitted. This prevents overflow when adding, which would affect bit 254.
+
+As a result, the children are guaranteed to be safe in accordance with the requirements of Ed25519, for many levels of derivation. $2^20 = 1048576$ in fact.
+
+Unfortunately, offering this many levels comes at a cost - only 28 bytes of randomization takes place for every level. 
+
+If even a single child private key is compromised, then the security of its "parent" key degrades to only 112--114 bits. In other words, computing the parent key may become more than 64,000 times easier for the attacker. If many sibling private keys are compromised, the parent key's security is degraded even further. And the same applies to further ancestors, up to the root private key.
+
+\section{Improving the BIP32-Ed25519 Standard}
+
 
 The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised. While the BIP32 approach cannot produce completely unrelated Ed25519 keys, our modifications ensure a reduction of only about 3 bits [DEPENDS ON WHICH "g" VALUE YOU CHOSE; IT'S (g-4)/2 BITS] of security in the above scenario. This is done without sacrificing the number of child keys a parent can have, and by retaining a deep enough hierarchy of keys for applications.
 
