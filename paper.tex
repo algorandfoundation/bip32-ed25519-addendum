@@ -58,7 +58,7 @@ Blockchains rely on users to generate seed phrases that correspond to public/pri
 
 
 \subsection{Hierarchical Deterministic Wallets}
-
+\label{subsec:hd_wallets}
 
 Bitcoin Improvement Proposal 32 (BIP32) was introduced to provide users with a means to deterministically derive many public/private keypairs from a single secret seed, greatly easing the management of seed phrases.
 
@@ -122,7 +122,7 @@ In this paper an improvement to their method is proposed that provides a more se
 
 \section{Security Review}
 
-While reviewing the BIP32-Ed25519 paper, two issues were identified, the first minor and the other major.
+While reviewing the BIP32-Ed25519 paper\cite{BIP32-Ed25519}, two issues were identified, the first minor and the other major.
 
 \subsection{Discarding bad child private or public keys}
 
@@ -152,7 +152,7 @@ $  Z \leftarrow
   \end{cases}
   $
 
-Truncate the 32 byte $Z$ to 28 bytes: $Z_L \leftarrow Z_{[:28]}$.
+Truncate the 32 byte $Z$ to 28 bytes: $Z_L \leftarrow Z_{[:224]}$.
 
 Calculate, depending on choice, the child private key (scalar) or public key (corresponding to an address on the blockchain):
 
@@ -184,23 +184,50 @@ In short, the key at level $j$ is defined by the inequality, $a_j < a + j2^{227}
 
 The paper specifies $j \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, such that $a_{j} \leq 2^{254} + 2^{253} + 2^{247}$ - a form suitable for our purposes.
 
-
 Unfortunately, offering this many levels comes at a cost: only 28 bytes (224 bits) of randomization takes place for every level. 
 
-Consider the scenario where a single child private key is compromised. The security of its parent key would degrade to only $\sqrt{2^{224}}=2^{112}$ due to the Birthday Attack.
+Consider the scenario where a single child private key is compromised. The security of its parent key would degrade to around only $\sqrt{2^{224}}=2^{112}$ due to the Birthday Attack, below the 128 bits of security offered by Ed25519. This contradicts the author's claims that no loss of security occurs as a result of their method.
 
-If even a single child private key is compromised, then the security of its parent key degrades to only 112--114 bits. In other words, computing the parent key may become more than 64,000 times ($\sqrt{2^{32}}=2^{16}$) easier for the attacker as a result of doing away with 4 bytes of entropy.
+In other words, computing the parent key may become more than 64,000 times ($\sqrt{2^{32}}=2^{16}$) easier for the attacker as a result of doing away with 4 bytes of entropy.
 
 If many sibling private keys are compromised, the parent key's security is degraded even further. And the same applies to further ancestors, up to the root private key.
 
 \section{Improving the BIP32-Ed25519 Standard}
 
-
 The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised.
 
-While the BIP32 approach cannot produce completely unrelated Ed25519 keys, our modifications ensure a reduction of only about 3 bits [DEPENDS ON WHICH "g" VALUE YOU CHOSE; IT'S (g-4)/2 BITS] of security in the above scenario.
+Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper\cite{BIP32-Ed25519} set $g=32$ to arrive on 28 bytes. An Ed25519 scalar has 251 bits available for randomization (255, 254, 2, 1, 0 are fixed), with an additional bit (253) having to be 0 to avoid overflow. The level at which we can no longer guarantee 253 will be 0 forms an upper bound.
 
-This is done without sacrificing the number of child keys a parent can have, and by retaining a deep enough hierarchy of keys for applications.
+We thus require, for security and correctness, that the following inequality holds:
+
+\begin{equation*}
+  g \geq d + 6
+\end{equation*}
+
+Where $2^d = D$, the number of levels of derivation. For best results, set the left hand and right hand sides equal.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|c|c|c|}
+  \hline
+  g & d  & D  \\
+  \hline
+  8 & 2 & 4 \\
+  9 & 3 & 8 \\
+  16 & 10 & 1024 \\
+  32 & 20 & 1048576 \\
+  \hline
+  \end{tabular}
+  \caption{Bits to randomize $g$ resulting in levels $D$.}
+  \label{tab:g_and_d}
+  \end{table}
+
+
+Table \ref{tab:g_and_d} presents a selection of possible values. $g=8$ is the most secure and breaks at the byte boundary (= 31 bytes) but results in only 4 levels of derivation - too few to satisfy the derivation schemes mentioned in Section \ref{subsec:hd_wallets} which require 5.
+
+$g=16$ is the next value that breaks at the byte boundary (= 30 bytes) and provides more than enough levels. It randomizes 240 out of the 251 bits available in a Ed25519 scalar.
+
+$g=9$ is the most secure value that also allows for enough derivation levels, allowing for 8 levels of derivation. It randomizes 246 out of the 251 bits available in a Ed25519 scalar. The only downside is that it does not break at the byte boundary, requiring a little bit of extra care when implementing.
 
 \section{Implementations}
 
@@ -216,6 +243,10 @@ The suggestions provided in this paper have been implemented as part of the ARC5
 \section{Conclusion}
 
 In this paper we have proposed a modification to the BIP32-Ed25519 standard that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys. We have shown that this modification provides a significant improvement in security, while still providing a sufficient number of child keys for most applications.
+
+In particular, setting $g=9$ allows for the most secure implementation that also satisfies the requirements of the most common derivation schemes.
+
+We have also provided implementations of this modification in several programming languages. We hope that this modification will be adopted by the wider community and help to improve the security of Ed25519-based hierarchical deterministic wallets.
 
 %%%%%%%%%%%%%%
 % References %
