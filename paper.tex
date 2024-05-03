@@ -168,16 +168,39 @@ By truncating $Z$ to 28 bytes and then multiplying by 8, the authors ensure that
 
 Note that as part of initial conversion from seed to master key $\tilde{k}$, only those $\tilde{k}$ that produce a $k_L$ whose bit 253 is 0 are admitted. This prevents overflow when adding, which would affect bit 254.
 
-As a result, the children are guaranteed to be safe in accordance with the requirements of Ed25519, for many levels of derivation. $2^20 = 1048576$ in fact.
+As a result, the children are guaranteed to be safe in accordance with the requirements of Ed25519, for many levels of derivation.
 
-Unfortunately, offering this many levels comes at a cost - only 28 bytes of randomization takes place for every level. 
+To understand how many levels can be safely performed, consider that the root key $a$ can be expressed as follows: $a = 2^{254} + 8b$, where $b < 2^{250}$, due to the bit manipulation and how we generate it. 
 
-If even a single child private key is compromised, then the security of its "parent" key degrades to only 112--114 bits. In other words, computing the parent key may become more than 64,000 times easier for the attacker. If many sibling private keys are compromised, the parent key's security is degraded even further. And the same applies to further ancestors, up to the root private key.
+Thus, $a = 2^{254} + 8b < 2^{254} + 2^{253}$.
+
+At the next level, $a_{1} = a + 8[Z_L] < 2^{254} + 2^{253} + 8 \cdot 2^{224} = 2^{254} + 2^{253} + 2^{227}$.
+
+At the next level, $a_{2} = a_{1} + 8[Z_L] < 2^{254} + 2^{253} + 2^{227} + 2^{227} = 2^{254} + 2^{253} + 2^{228}$.
+
+At the next level, $a_{3} = a_{2} + 8[Z_L] < 2^{254} + 2^{253} + 2^{228} + 2^{227}$.
+
+In short, the key at level $j$ is defined by the inequality, $a_j < a + j2^{227} = 2^{254} + 2^{253} + j2^{227}$.
+
+The paper specifies $j \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, such that $a_{j} \leq 2^{254} + 2^{253} + 2^{247}$ - a form suitable for our purposes.
+
+
+Unfortunately, offering this many levels comes at a cost: only 28 bytes (224 bits) of randomization takes place for every level. 
+
+Consider the scenario where a single child private key is compromised. The security of its parent key would degrade to only $\sqrt{2^{224}}=2^{112}$ due to the Birthday Attack.
+
+If even a single child private key is compromised, then the security of its parent key degrades to only 112--114 bits. In other words, computing the parent key may become more than 64,000 times ($\sqrt{2^{32}}=2^{16}$) easier for the attacker as a result of doing away with 4 bytes of entropy.
+
+If many sibling private keys are compromised, the parent key's security is degraded even further. And the same applies to further ancestors, up to the root private key.
 
 \section{Improving the BIP32-Ed25519 Standard}
 
 
-The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised. While the BIP32 approach cannot produce completely unrelated Ed25519 keys, our modifications ensure a reduction of only about 3 bits [DEPENDS ON WHICH "g" VALUE YOU CHOSE; IT'S (g-4)/2 BITS] of security in the above scenario. This is done without sacrificing the number of child keys a parent can have, and by retaining a deep enough hierarchy of keys for applications.
+The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised.
+
+While the BIP32 approach cannot produce completely unrelated Ed25519 keys, our modifications ensure a reduction of only about 3 bits [DEPENDS ON WHICH "g" VALUE YOU CHOSE; IT'S (g-4)/2 BITS] of security in the above scenario.
+
+This is done without sacrificing the number of child keys a parent can have, and by retaining a deep enough hierarchy of keys for applications.
 
 \section{Implementations}
 
