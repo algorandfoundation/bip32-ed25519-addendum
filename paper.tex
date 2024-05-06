@@ -184,7 +184,7 @@ At the next level, $a_{3} = a_{2} + 8[Z_L] < 2^{254} + 2^{253} + 2^{228} + 2^{22
 
 In short, the key at level $j$ is defined by the inequality, $a_j < a + j2^{227} = 2^{254} + 2^{253} + j2^{227}$.
 
-The paper specifies $j \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, such that $a_{j} \leq 2^{254} + 2^{253} + 2^{247}$ - a form suitable for our purposes.
+The paper specifies $j \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, such that $a_{j} \leq 2^{254} + 2^{253} + 2^{227 + 20 = 247}$ - a form suitable for our purposes.
 
 Unfortunately, offering this many levels comes at a cost: only 28 bytes (224 bits) of randomization takes place for every level. 
 
@@ -231,7 +231,7 @@ $g=16$ is the next value that breaks at the byte boundary (= 30 bytes) and provi
 
 $g=9$ is the most secure value that also allows for enough derivation levels, allowing for 8 levels of derivation. It randomizes 246 out of the 251 bits available in a Ed25519 scalar. The only downside is that it does not break at the byte boundary, requiring a little bit of extra care when implementing.
 
-It also becomes apparent that the recommended maximum level of depth in the BIP32-Ed25519 paper, $2^{20}$, is lower than the actual number of levels that can be performed without bit overflows, $2^{26}$. Indeed, $a_{j} \leq 2^{254} + 2^{253} + 2^{247} < 2^{254} + 2^{253} + 2^{252}$.
+It also becomes apparent that the recommended maximum level of depth in the BIP32-Ed25519 paper, $2^{20}$, is lower than the actual number of levels that can be performed without bit overflows breaking the scalar's Ed25519-compatibility: $2^{26}$. Indeed, $a_{j} \leq 2^{254} + 2^{253} + 2^{247} < 2^{254} + 2^{253} + 2^{227+26=253}$.
 \section{Implementations}
 
 
