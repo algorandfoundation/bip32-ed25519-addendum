@@ -210,23 +210,19 @@ Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper\cite{BIP32-E
 An Ed25519 scalar has 251 bits available for randomization (255, 254, 2, 1, 0 are fixed), with an additional bit (253) having to be 0 to avoid overflow. The level at which we can no longer guarantee 253 will be 0 forms an upper bound.
 
 Recall from Section \ref{subsec:the_28_left_bytes_of_z} that each $Z_L < 2^{256 - g}$ and is multiplied by 8. Root $a$ must also be less than $2^{254} + 2^{253}$. Define $d = log_2(D)$. The previous paragraph can thus be expressed as follows:
-
 \begin{align*}
   a_D &< a + 8\cdot D\cdot2^{256 - g} \\
   a_D &< a + D\cdot2^{259 - g} \\
   a_D &< a + 2^{259 + d - g}\\
   a_D < 2^{254} +& 2^{253} + 2^{259 + d - g} < 2 \cdot 2^{254}
 \end{align*}
-
 The relationship between $d$ and $g$ can be expressed as follows:
-
 \begin{align*}
   253 &\geq 259 + d - g \\
   &\Downarrow \\
   g &\geq d + 6
 \end{align*}
-
- For best results, set the left hand and right hand sides equal.
+For best results, set the left hand and right hand sides equal.
 
 \begin{table}[h]
   \centering
