@@ -133,7 +133,9 @@ While deriving a new private or public child key, it is possible to produce a ch
   \item $A_i$ is the identity point (0, 1)
 \end{itemize}
 
-The paper states that if these happen the child must be discarded. However it does not give instructions on how to proceed with the derivation. For example, an implementer could mark the index as forbidden and increment the child index.
+The paper states that if these happen the child must be discarded. However it does not give instructions on how to proceed with the derivation.
+
+For example, an implementer could mark the index as forbidden and simply increment the child index. However, depending on the level, should the user share their extended public key to the world and others derive the same faulty child key, the security of the parent key would be degraded.
 
 Regardless, the likelihood of either happening is highly unlikely.
 
