@@ -145,7 +145,8 @@ For example, an implementer could mark the index as forbidden and simply increme
 
 Regardless, the likelihood of either happening is highly unlikely.
 
-\subsection{The 28 left bytes of Z }
+\subsection{The 28 left bytes of Z}
+\label{subsec:the_28_left_bytes_of_z}
 
 As was mentioned in Section \ref{subsec:elliptic_curves_and_their_key_spaces}, there is a need to ensure that bits 0, 1, 2, 3 and 255 are 0 and that bit 254 is 1 for private keys (scalars) in Ed25519.
 
@@ -188,9 +189,9 @@ At the next level, $a_{2} = a_{1} + 8[Z_L] < 2^{254} + 2^{253} + 2^{227} + 2^{22
 
 At the next level, $a_{3} = a_{2} + 8[Z_L] < 2^{254} + 2^{253} + 2^{228} + 2^{227}$.
 
-In short, the key at level $j$ is defined by the inequality, $a_j < a + j2^{227} = 2^{254} + 2^{253} + j2^{227}$.
+In short, the key at level $D$ depth (called $j$ in the paper) is defined by the inequality, $a_D < a + D\cdot2^{227} = 2^{254} + 2^{253} + D\cdot2^{227}$.
 
-The paper specifies $j \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, such that $a_{j} \leq 2^{254} + 2^{253} + 2^{227 + 20 = 247}$ - a form suitable for our purposes.
+The paper specifies $D \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, such that $a_{D} \leq 2^{254} + 2^{253} + 2^{227 + 20 = 247}$ - a form suitable for our purposes.
 
 Unfortunately, offering this many levels comes at a cost: only 28 bytes (224 bits) of randomization takes place for every level. 
 
@@ -204,15 +205,28 @@ If many sibling private keys are compromised, the parent key's security is degra
 
 The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised.
 
-Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper\cite{BIP32-Ed25519} set $g=32$ to arrive on 28 bytes. An Ed25519 scalar has 251 bits available for randomization (255, 254, 2, 1, 0 are fixed), with an additional bit (253) having to be 0 to avoid overflow. The level at which we can no longer guarantee 253 will be 0 forms an upper bound.
+Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper\cite{BIP32-Ed25519} set $g=32$ to arrive on 28 bytes.
 
-We thus require, for security and correctness, that the following inequality holds:
+An Ed25519 scalar has 251 bits available for randomization (255, 254, 2, 1, 0 are fixed), with an additional bit (253) having to be 0 to avoid overflow. The level at which we can no longer guarantee 253 will be 0 forms an upper bound.
 
-\begin{equation*}
-  g \geq d + 6
-\end{equation*}
+Recall from Section \ref{subsec:the_28_left_bytes_of_z} that each $Z_L < 2^{256 - g}$ and is multiplied by 8. Root $a$ must also be less than $2^{254} + 2^{253}$. Define $d = log_2(D)$. The previous paragraph can thus be expressed as follows:
 
-Where $2^d = D$, the number of levels of derivation. For best results, set the left hand and right hand sides equal.
+\begin{align*}
+  a_D &< a + 8\cdot D\cdot2^{256 - g} \\
+  a_D &< a + D\cdot2^{259 - g} \\
+  a_D &< a + 2^{259 + d - g}\\
+  a_D < 2^{254} +& 2^{253} + 2^{259 + d - g} < 2 \cdot 2^{254}
+\end{align*}
+
+The relationship between $d$ and $g$ can be expressed as follows:
+
+\begin{align*}
+  253 &\geq 259 + d - g \\
+  &\Downarrow \\
+  g &\geq d + 6
+\end{align*}
+
+ For best results, set the left hand and right hand sides equal.
 
 \begin{table}[h]
   \centering
@@ -237,7 +251,11 @@ $g=16$ is the next value that breaks at the byte boundary (equal to 30 bytes) an
 
 $g=9$ is the most secure value that also allows for enough derivation levels, allowing for 8 levels of derivation. It randomizes 246 out of the 251 bits available in a Ed25519 scalar. The only downside is that it does not break at the byte boundary, requiring a bit of extra care when implementing.
 
-It also becomes apparent that the recommended maximum level of depth in the BIP32-Ed25519 paper, $2^{20}$, is lower than the actual number of levels that can be performed without bit overflows breaking the scalar's Ed25519-compatibility: $2^{26}$. Indeed, $a_{j} \leq 2^{254} + 2^{253} + 2^{247} < 2^{254} + 2^{253} + 2^{227+26=253} = 2^{255}$.
+It also becomes apparent that the recommended maximum level of depth in the BIP32-Ed25519 paper, $2^{20}$, is lower than the actual number of levels that can be performed without bit overflows breaking the scalar's Ed25519-compatibility: $2^{26}$.
+
+Indeed, for $D=2^{20}$, $a_{D} \leq 2^{254} + 2^{253} + 2^{247} < 2^{254} + 2^{253} + 2^{227+26=253} = 2^{255}$.
+
+
 \section{Implementations}
 
 
