@@ -68,7 +68,7 @@ BIP43\cite{BIP43} introduced the concept of a purpose field, claiming that the o
 
 $m / \text{purpose}' / \text{coin\_type}' / \text{account}' / \text{change} / \text{key}$
 
-\begin{itemize}
+\begin{itemize}[label=\textendash, itemsep=-0.5em]
   \item m: master seed
   \item purpose': derivation path scheme (e.g., 44')
   \item coin\_type': constant corresponding to the blockchain
@@ -106,7 +106,7 @@ Ed25519 has a number of advantages, such as high speed constant-time implementat
 
 Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits. RFC\-8032\cite{RFC8032} specifies that of the 32 byte private key:
 
-\begin{itemize}
+\begin{itemize}[label=\textendash, itemsep=-0.5em]
   \item Bits 0, 1, 2:  set to 0, ensuring that the key is a multiple of 8 and avoiding small subgroup attacks.
   \item Bit 254: set to 1, to ensuring the Montgommery ladder computation used in scalar multiplication runs in constant time.
   \item Bit 255: set to 0, ensuring the key is in the range of the field order ($2^{255} - 19$).
@@ -134,7 +134,7 @@ While reviewing the BIP32-Ed25519 paper\cite{BIP32-Ed25519}, two issues were ide
 
 While deriving a new private or public child key, it is possible to produce a child that is unsafe to use:
 
-\begin{itemize}
+\begin{itemize}[label=\textendash, itemsep=-0.5em]
   \item $k_L$ is divisible by the base order $n$
   \item $A_i$ is the identity point (0, 1)
 \end{itemize}
