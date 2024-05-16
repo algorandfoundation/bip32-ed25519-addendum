@@ -12,7 +12,7 @@
 
 \documentclass[12pt, a4paper, twocolumn]{article}
 \usepackage{xurl}
-\usepackage[super,comma,sort&compress]{natbib}
+\usepackage[sort&compress]{natbib}
 \usepackage{abstract}
 \renewcommand{\abstractnamefont}{\normalfont\bfseries}
 \renewcommand{\abstracttextfont}{\normalfont\small\itshape}
@@ -62,9 +62,9 @@ In the basic case, a single seed phrase corresponds to a single address, requiri
 \subsection{Hierarchical Deterministic Wallets}
 \label{subsec:hd_wallets}
 
-Bitcoin Improvement Proposal 32 (BIP32\cite{BIP32}) was introduced to provide users with a means to deterministically derive many public/private keypairs from a single secret seed, greatly easing the management of seed phrases.
+Bitcoin Improvement Proposal 32 (BIP32~\cite{BIP32}) was introduced to provide users with a means to deterministically derive many public/private keypairs from a single secret seed, greatly easing the management of seed phrases.
 
-BIP43\cite{BIP43} introduced the concept of a purpose field, claiming that the original BIP32 standard allowed for too many degrees of freedom and resulted in many wallet softwares which claimed to be BIP32 compatible but were ultimately incompatible with each other. BIP44\cite{BIP44} took this a step further and defined 5 levels in the BIP32 path:
+BIP43~\cite{BIP43} introduced the concept of a purpose field, claiming that the original BIP32 standard allowed for too many degrees of freedom and resulted in many wallet softwares which claimed to be BIP32 compatible but were ultimately incompatible with each other. BIP44~\cite{BIP44} took this a step further and defined 5 levels in the BIP32 path:
 
 $m / \text{purpose}' / \text{coin\_type}' / \text{account}' / \text{change} / \text{key}$
 
@@ -89,22 +89,22 @@ Since the indices and change levels are not hardened but the account level is, i
 
 This class of wallets is known as Hierarchical Deterministic Wallets, or HD Wallets for short.
 
-Other derivation schemes exist as well, such as BIP49\cite{BIP49} for P2SH nested SegWit addresses, and BIP84\cite{BIP84} for native SegWit addresses. ZIP32\cite{ZIP32}, a variant used by ZCash for their shielded addresses, does away with the change field completely.
+Other derivation schemes exist as well, such as BIP49~\cite{BIP49} for P2SH nested SegWit addresses, and BIP84~\cite{BIP84} for native SegWit addresses. ZIP32~\cite{ZIP32}, a variant used by ZCash for their shielded addresses, does away with the change field completely.
 
-A complementary set of standards called SatoshiLab Improvement Protocols (SLIP) also exist, maintained by SatoshiLab (the creators of the Trezor hardware wallet) and come up in the context of BIP32 wallets. For example, SLIP10\cite{SLIP10} or SLIP23\cite{SLIP23}. SLIP44\cite{BIP44} extended BIP44 to assign $\text{coin\_type}$ values for blockchains other than Bitcoin mainnet and testnet, e.g. $\text{283}'$ for Algorand.
+A complementary set of standards called SatoshiLab Improvement Protocols (SLIP) also exist, maintained by SatoshiLab (the creators of the Trezor hardware wallet) and come up in the context of BIP32 wallets. For example, SLIP10~\cite{SLIP10} or SLIP23~\cite{SLIP23}. SLIP44~\cite{BIP44} extended BIP44 to assign $\text{coin\_type}$ values for blockchains other than Bitcoin mainnet and testnet, e.g. $\text{283}'$ for Algorand.
 
 Note that all of the schemes listed above rely on 5 or fewer levels of derivation.
 
 \subsection{Elliptic curves and their key spaces}
 \label{subsec:elliptic_curves_and_their_key_spaces}
 
-Bitcoin relies on the Secp256k1\cite{Secp256k1} elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k] \text{ mod } q$ for $q$ the order of the field.
+Bitcoin relies on the Secp256k1~\cite{Secp256k1} elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k] \text{ mod } q$ for $q$ the order of the field.
 
-An alternate elliptic curve standard for digital signatures is Ed25519\cite{Ed25519}. It is used by a number of blockchains such as Algorand\cite{AlgorandEd25519}, Cardano\cite{CardanoEd25519}, Monero\cite{MoneroEd25519}, Nano\cite{NanoEd25519}, Solana\cite{SolanaEd25519} and more. Polkadot\cite{PolkadotEd25519} uses a variant called Schnorrkel/Ristretto x25519 (``sr25519'') and Tezos\cite{TezosEd25519} offers it alongside other curves.
+An alternate elliptic curve standard for digital signatures is Ed25519~\cite{Ed25519}. It is used by a number of blockchains such as Algorand~\cite{AlgorandEd25519}, Cardano~\cite{CardanoEd25519}, Monero~\cite{MoneroEd25519}, Nano~\cite{NanoEd25519}, Solana~\cite{SolanaEd25519} and more. Polkadot~\cite{PolkadotEd25519} uses a variant called Schnorrkel/Ristretto x25519 (``sr25519'') and Tezos~\cite{TezosEd25519} offers it alongside other curves.
 
-Ed25519 has a number of advantages, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered\cite{Ed25519}).
+Ed25519 has a number of advantages, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered~\cite{Ed25519}).
 
-Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits. RFC\-8032\cite{RFC8032} specifies that of the 32 byte private key:
+Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits. RFC\-8032~\cite{RFC8032} specifies that of the 32 byte private key:
 
 \begin{itemize}[label=\textendash, itemsep=-0.5em]
   \item Bits 0, 1, 2:  set to 0, ensuring that the key is a multiple of 8 and avoiding small subgroup attacks.
@@ -114,21 +114,21 @@ Unfortunately, private keys have to be derived by hashing the seed and manipulat
 
 By definition the key space for Ed25519 is non-linear.
 
-As a consequence of this fact, the SLIP10\cite{SLIP10} standard decided to not support public key child derivation for Ed25519 keys. Only hardened key generation from private parent key to private child key is supported by it. This is, as of the time of writing, what Solana supports\cite{SolanaBip32}. 
+As a consequence of this fact, the SLIP10~\cite{SLIP10} standard decided to not support public key child derivation for Ed25519 keys. Only hardened key generation from private parent key to private child key is supported by it. This is, as of the time of writing, what Solana supports~\cite{SolanaBip32}. 
 
 In contrast, a paper that has seen recognition in the industry is BIP32-Ed25519
-Hierarchical Deterministic Keys over a Non-linear Keyspace \cite{BIP32-Ed25519}. It extends the BIP32 standard to work with Ed25519 keys with public key child derivation.
+Hierarchical Deterministic Keys over a Non-linear Keyspace~\cite{BIP32-Ed25519}. It extends the BIP32 standard to work with Ed25519 keys with public key child derivation.
 
-It has been adopted by Cardano, though conforming additionally with SLIP23\cite{SLIP23} to derive the initial master Ed25519 key and chain code.
+It has been adopted by Cardano, though conforming additionally with SLIP23~\cite{SLIP23} to derive the initial master Ed25519 key and chain code.
 
-While solving the problem (with only minor modifications to BIP32 and working with ``after-hash'' private keys of Ed25519)\cite{BIP32-Ed25519}, certain decisions were made that result in unnecessary security degradation.
+While solving the problem (with only minor modifications to BIP32 and working with ``after-hash'' private keys of Ed25519)~\cite{BIP32-Ed25519}, certain decisions were made that result in unnecessary security degradation.
 
 In this paper an improvement to their method is proposed that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys.
 
 
 \section{Security Review}
 
-While reviewing the BIP32-Ed25519 paper\cite{BIP32-Ed25519}, two issues were identified, the first minor and the other major.
+While reviewing the BIP32-Ed25519 paper~\cite{BIP32-Ed25519}, two issues were identified, the first minor and the other major.
 
 \subsection{Discarding bad child private or public keys}
 
@@ -205,7 +205,7 @@ If many sibling private keys are compromised, the parent key's security is degra
 
 The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised.
 
-Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper\cite{BIP32-Ed25519} set $g=32$ to arrive on 28 bytes.
+Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper~\cite{BIP32-Ed25519} set $g=32$ to arrive on 28 bytes.
 
 An Ed25519 scalar has 251 bits available for randomization (255, 254, 2, 1, 0 are fixed), with an additional bit (253) having to be 0 to avoid overflow. The level at which we can no longer guarantee 253 will be 0 forms an upper bound.
 
@@ -262,7 +262,7 @@ Indeed, for $D=2^{20}$, $a_{D} \leq 2^{254} + 2^{253} + 2^{247} < 2^{254} + 2^{2
 \section{Implementations}
 
 
-The suggestions provided in this paper have been implemented as part of the ARC52 Bip32-Ed25519 libraries provided by the Algorand Foundation \cite{AF}.
+The suggestions provided in this paper have been implemented as part of the ARC52 Bip32-Ed25519 libraries provided by the Algorand Foundation~\cite{AF}.
 
 \begin{itemize}
   \item \href{https://github.com/algorandfoundation/bip32-ed25519-kotlin}{Kotlin}
