@@ -81,7 +81,7 @@ The apostrophe in the paths indicates that the respective field is hardened, mea
 
 Each level has $2^{32}$ possible values. When hardening a level, the first bit is set to 1. Thus $[0, 2^{31})$ are reserved for non-hardened keys, and $[2^{31}, 2^{32})$ are reserved for hardened keys.
 
-The terms "account" and "address" are sometimes used interchangeably in casual conversation. In the HD wallet context however, an address is the most basic unit, while an account represents a logical grouping of many addresses. 
+The terms ``account'' and ``address'' are sometimes used interchangeably in casual conversation. In the HD wallet context however, an address is the most basic unit, while an account represents a logical grouping of many addresses. 
 
 Change is used to differentiate between addresses used for receiving payments and addresses used for change in transactions, but this is more relevant for UTXO blockchains. Account-based blockchains like Algorand or Ethereum do not have this distinction, and can either set it to 0 or reserve it for other use.
 
@@ -100,7 +100,7 @@ Note that all of the schemes listed above rely on 5 or fewer levels of derivatio
 
 Bitcoin relies on the Secp256k1\cite{Secp256k1} elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k] \text{ mod } q$ for $q$ the order of the field.
 
-An alternate elliptic curve standard for digital signatures is Ed25519\cite{Ed25519}. It is used by a number of blockchains such as Algorand\cite{AlgorandEd25519}, Cardano\cite{CardanoEd25519}, Monero\cite{MoneroEd25519}, Nano\cite{NanoEd25519}, Solana\cite{SolanaEd25519} and more. Polkadot\cite{PolkadotEd25519} uses a variant called Schnorrkel/Ristretto x25519 ("sr25519") and Tezos\cite{TezosEd25519} offers it alongside other curves.
+An alternate elliptic curve standard for digital signatures is Ed25519\cite{Ed25519}. It is used by a number of blockchains such as Algorand\cite{AlgorandEd25519}, Cardano\cite{CardanoEd25519}, Monero\cite{MoneroEd25519}, Nano\cite{NanoEd25519}, Solana\cite{SolanaEd25519} and more. Polkadot\cite{PolkadotEd25519} uses a variant called Schnorrkel/Ristretto x25519 (``sr25519'') and Tezos\cite{TezosEd25519} offers it alongside other curves.
 
 Ed25519 has a number of advantages, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered\cite{Ed25519}).
 
@@ -121,7 +121,7 @@ Hierarchical Deterministic Keys over a Non-linear Keyspace \cite{BIP32-Ed25519}.
 
 It has been adopted by Cardano, though conforming additionally with SLIP23\cite{SLIP23} to derive the initial master Ed25519 key and chain code.
 
-While solving the problem (with only minor modifications to BIP32 and working with "after-hash" private keys of Ed25519)\cite{BIP32-Ed25519}, certain decisions were made that result in unnecessary security degradation.
+While solving the problem (with only minor modifications to BIP32 and working with ``after-hash'' private keys of Ed25519)\cite{BIP32-Ed25519}, certain decisions were made that result in unnecessary security degradation.
 
 In this paper an improvement to their method is proposed that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys.
 
@@ -288,3 +288,8 @@ We have also provided implementations of this modification in several programmin
 \bibliography{sources}
 
 \end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
