@@ -21,13 +21,13 @@
 \usepackage[skip=10pt]{parskip}
 \usepackage{enumitem}
 
-
 \titleformat*{\section}{\large\bfseries}
 \titleformat*{\subsection}{\normalsize\bfseries}
 
 % Any configuration that should be done before the end of the preamble:
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue}
+\usepackage[capitalize,nameinlink,noabbrev]{cleveref} % must load after hyperref
 
 \begin{document}
 
@@ -148,7 +148,7 @@ Regardless, the likelihood of either happening is highly unlikely.
 \subsection{The 28 left bytes of Z}
 \label{subsec:the_28_left_bytes_of_z}
 
-As was mentioned in Section \ref{subsec:elliptic_curves_and_their_key_spaces}, there is a need to ensure that bits 0, 1, 2, 3 and 255 are 0 and that bit 254 is 1 for private keys (scalars) in Ed25519.
+As was mentioned in \cref{subsec:elliptic_curves_and_their_key_spaces}, there is a need to ensure that bits 0, 1, 2, 3 and 255 are 0 and that bit 254 is 1 for private keys (scalars) in Ed25519.
 
 The paper's method for ensuring this is to produce the child private key respectively public key as follows:
 
@@ -209,7 +209,7 @@ Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper~\cite{BIP32-
 
 An Ed25519 scalar has 251 bits available for randomization (255, 254, 2, 1, 0 are fixed), with an additional bit (253) having to be 0 to avoid overflow. The level at which we can no longer guarantee 253 will be 0 forms an upper bound.
 
-Recall from Section \ref{subsec:the_28_left_bytes_of_z} that each $Z_L < 2^{256 - g}$ and is multiplied by 8. Root $a$ must also be less than $2^{254} + 2^{253}$. Define $d = log_2(D)$. The previous paragraph can thus be expressed as follows:
+Recall from \cref{subsec:the_28_left_bytes_of_z} that each $Z_L < 2^{256 - g}$ and is multiplied by 8. Root $a$ must also be less than $2^{254} + 2^{253}$. Define $d = log_2(D)$. The previous paragraph can thus be expressed as follows:
 \begin{align*}
   a_D &< a + 8\cdot D\cdot2^{256 - g} \\
   a_D &< a + D\cdot2^{259 - g} \\
@@ -245,10 +245,11 @@ The relationship between $d$ and $g$ can be stated as:
   \end{tabular}
   \caption{Bits to randomize $g$ resulting in levels $D$. $S$ is the number of safe levels.}
   \label{tab:g_and_d}
-  \end{table}
+\end{table}
 
 
-Table \ref{tab:g_and_d} presents a selection of possible values. $g=8$ is the most secure and breaks at the byte boundary (256 bits - 8 bits = 31 bytes) but it results in only 3 levels of derivation - too few to satisfy the derivation schemes mentioned in Section \ref{subsec:hd_wallets} which require 5.
+\Cref{tab:g_and_d} presents a selection of possible values.
+$g=8$ is the most secure and breaks at the byte boundary (256 bits - 8 bits = 31 bytes) but it results in only 3 levels of derivation - too few to satisfy the derivation schemes mentioned in \cref{subsec:hd_wallets}, which require 5.
 
 $g=16$ is the next value that breaks at the byte boundary (equal to 30 bytes) and provides more than enough levels. It randomizes 240 out of the 251 bits available in an Ed25519 scalar.
 
