@@ -160,40 +160,37 @@ However, depending on the level, if the user were to publish the extended public
 
 Fortunately, it is extremely unlikely that either case will happen, based on the security of the hash function used for derivation.
 
-As was mentioned in \cref{subsec:elliptic_curves_and_their_key_spaces}, there is a need to ensure that bits 0, 1, 2, 3 and 255 are 0 and that bit 254 is 1 for private keys (scalars) in Ed25519.
+\subsection{The 28 bytes of Z}
+\label{subsec:the_28_bytes_of_z}
 
-The paper's method for ensuring this is to produce the child private key respectively public key as follows:
+As was mentioned in \cref{subsec:elliptic_curves_and_their_key_spaces}, for Ed25519 private-keys scalars, one must ensure that bits 0, 1, 2, 3 and 255 are 0, and that bit 254 is 1.
+The paper's method for ensuring this is to produce the child private key and public key as follows.
 
-Derive $Z$ from either the parent's public key or parent's extended private key, depending on whether the child is hardened or not:
-
-$  Z \leftarrow 
+Derive $Z$ from either the parent's public key $A^{P}$ or parent's private key $k^{P}$, depending on whether the child is hardened or not:
+\[ Z \leftarrow
   \begin{cases} 
-  F_{c^P}(0x02||A^P||i) & i \in  [0, 2^{31}) \\
-  F_{c^P}(0x00||k^P||i) & i \in [2^{31}, 2^{32})
-  \end{cases}
-  $
+    F_{c^P}(\mathtt{0x02} \| A^P \| i) & i \in  [0, 2^{31}) \\
+    F_{c^P}(\mathtt{0x00} \| k^P \| i) & i \in [2^{31}, 2^{32}) .
+  \end{cases} \]
+Then truncate the 32-byte $Z$ to 28 bytes (224 bits): $Z_L \leftarrow Z_{[:224]}$.
 
-Truncate the 32-byte $Z$ to 28 bytes (224 bits): $Z_L \leftarrow Z_{[:224]}$.
+Depending on hardening, calculate the child private key (scalar) or public key (which corresponds to an address on the blockchain):
+\begin{align*}
+  k_L &\leftarrow \langle 8[Z_L]  + [k_L^P]\rangle \\
+  A_i &\leftarrow A^P + [8Z_L]B .
+\end{align*}
+Here~$B$ is the base point of the curve, and~$i$ is a little-endian 4-byte string.
 
-Depending on the choice, calculate the child private key (scalar) or public key (which corresponds to an address on the blockchain):
+The calculations of~$k_R$ (which is necessary to produce the full private key $k = (k_L, k_R)$) and the child chain code $c_i$ (which is necessary to serve as the key for the HMAC-512 function~$F$, and is part of the extended public key $(A_i, c_i)$) have been omitted for brevity.
 
-\begin{enumerate}[label={}] 
-  \item $k_L \leftarrow \langle 8[Z_L]  + [k{_L}^P]\rangle$ 
-  \item $A_i \leftarrow A^P + [8Z_L]B$
-\end{enumerate}
+By truncating $Z$ to 28 bytes and then multiplying by 8, the authors ensure that the scalar is a multiple of 8 and that bit 255 is 0.
+When $k_L^P$ is added, it contributes a 1 at bit 254.
 
+Note that as part of the initial conversion from seed to master key $\tilde{k}$, only those $\tilde{k}$ that produce a $k_L$ with bit 253 set to 0 are admitted.
+This prevents overflow when adding, which would affect bit 254.
+As a result, the child private-key scalars are guaranteed to meet the requirements of Ed25519, for many levels of derivation.
 
-The calculations of $k_R$, which are necessary to produce the extended private key $k = (k_L, k_R)$, and the child chain code $c_i$, which is necessary to serve as the key for the HMAC-512 function $F$ (and be part of the extended public key $(A_i, c_i)$); have been omitted for brevity. $B$ represents the base point of the curve and $i$ a little-endian 4-byte string.
-
-By truncating $Z$ to 28 bytes and then multiplying by 8, the authors ensure that the scalar is a multiple of 8 and that bit 255 is 0. When $k{_L}^P$ is added, it contributes a 1 on bit 254.
-
-Note that as part of the initial conversion from seed to master key $\tilde{k}$, only those $\tilde{k}$ that produce a $k_L$ with bit 253 set to 0 are admitted. This prevents overflow when adding, which would affect bit 254.
-
-As a result, the children are guaranteed to be safe in accordance with the requirements of Ed25519, for many levels of derivation.
-
-To understand how many levels can be safely performed, consider that the root key $a$ can be expressed as follows: $a = 2^{254} + 8b$, where $b < 2^{250}$, due to the bit manipulation and the way it is generated. 
-
-Thus, $a = 2^{254} + 8b < 2^{254} + 2^{253}$.
+To understand how many levels can be safely performed, consider that the root key~$a$ can be expressed as $a = 2^{254} + 8b < 2^{254} + 2^{253}$, where $b < 2^{250}$ due to the bit manipulation and the way it is generated.
 
 At the next level, $a_{1} = a + 8[Z_L] < 2^{254} + 2^{253} + 8 \cdot 2^{224} = 2^{254} + 2^{253} + 2^{227}$.
 
@@ -201,13 +198,15 @@ At the next level, $a_{2} = a_{1} + 8[Z_L] < 2^{254} + 2^{253} + 2^{227} + 2^{22
 
 At the next level, $a_{3} = a_{2} + 8[Z_L] < 2^{254} + 2^{253} + 2^{228} + 2^{227}$.
 
-In short, the key at level $D$ depth (called $j$ in the paper) is defined by the inequality, $a_D < a + D\cdot2^{227} = 2^{254} + 2^{253} + D\cdot2^{227}$.
+In short, the key at depth~$D$ (called~$j$ in the paper) satisfies the inequality $a_D < a + D\cdot2^{227} < 2^{254} + 2^{253} + D\cdot2^{227}$.
 
-The paper specifies $D \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, such that $a_{D} \leq 2^{254} + 2^{253} + 2^{227 + 20 = 247}$ - a form suitable for our purposes.
+The paper specifies $D \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, so that $a_{D} < 2^{254} + 2^{253} + 2^{247}$, a form that is compatible with the Ed25519 requirements.
 
-Unfortunately, offering this many levels comes at a cost: only 28 bytes (224 bits) of randomization takes place for every level. 
+Unfortunately, offering this many levels comes at a cost: only 28 bytes (224 bits) of randomization takes place for each level.
 
-Consider the scenario where a single child private key is compromised. The security of its parent key would degrade to around only $\sqrt{2^{224}}=2^{112}$ due to the Birthday Attack, below the 128 bits of security offered by Ed25519. This contradicts the author's claims that no loss of security occurs as a result of their method.
+Consider the scenario where a single child private key is compromised.
+The security of its parent key would degrade to around only $\sqrt{2^{224}}=2^{112}$ due to standard rho/Kangaroo attacks, below the 128 bits of security offered by Ed25519.
+This contradicts the authors' claims that no loss of security occurs as a result of their method.
 
 In other words, computing the parent key may become more than 64,000 times ($\sqrt{2^{32}}=2^{16}$) easier for the attacker as a result of doing away with 4 bytes of entropy.
 
