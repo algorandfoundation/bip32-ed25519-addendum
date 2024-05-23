@@ -147,21 +147,18 @@ While reviewing the BIP32-Ed25519 paper~\cite{BIP32-Ed25519}, two issues were id
 
 \subsection{Discarding bad child private or public keys}
 
-While deriving a new private or public child key, it is possible to produce a child that is unsafe to use:
-
+While deriving a new private or public child key, it is possible to produce a child that is unsafe to use, in the following two cases:
 \begin{itemize}[label=\textendash, itemsep=-0.5em]
-  \item $k_L$ is divisible by the base order $n$
-  \item $A_i$ is the identity point (0, 1)
+\item $k_L$ is divisible by the order of the base point,
+\item $A_i$ is the identity point.
 \end{itemize}
 
-The paper states that if these happen the child must be discarded. However it does not give instructions on how to proceed with the derivation.
+The paper states that if either of these happen, the child must be discarded.
+However, it does not give instructions on how to proceed with the derivation.
+For example, an implementer could mark the index as forbidden and simply increment the child index.
+However, depending on the level, if the user were to publish the extended public key and others were to derive the same faulty child key, the security of the parent key would be degraded.
 
-For example, an implementer could mark the index as forbidden and simply increment the child index. However, depending on the level, should the user share their extended public key to the world and others derive the same faulty child key, the security of the parent key would be degraded.
-
-Regardless, the likelihood of either happening is highly unlikely.
-
-\subsection{The 28 left bytes of Z}
-\label{subsec:the_28_left_bytes_of_z}
+Fortunately, it is extremely unlikely that either case will happen, based on the security of the hash function used for derivation.
 
 As was mentioned in \cref{subsec:elliptic_curves_and_their_key_spaces}, there is a need to ensure that bits 0, 1, 2, 3 and 255 are 0 and that bit 254 is 1 for private keys (scalars) in Ed25519.
 
