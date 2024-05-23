@@ -21,6 +21,7 @@
 \usepackage{titlesec}
 \usepackage[skip=10pt]{parskip}
 \usepackage{enumitem}
+\usepackage{booktabs}
 
 \titleformat*{\section}{\large\bfseries}
 \titleformat*{\subsection}{\normalsize\bfseries}
@@ -214,62 +215,56 @@ If many sibling private keys are compromised, the parent key's security is degra
 
 \section{Improving the BIP32-Ed25519 Standard}
 
-The purpose of our modifications is to make derived keys less related, so that there is less security degradation if some private keys are compromised.
+The purpose of our modifications is to make derived keys more randomized and less related, so that there is less security degradation if some private keys are compromised.
 
-Define $g$, such that $Z_L = Z_{[:256-g]}$. The BIP32-Ed25519 paper~\cite{BIP32-Ed25519} set $g=32$ to arrive on 28 bytes.
+We introduce a positive integer parameter~$g$, and instead define $Z_L = Z_{[:256-g]}$ to be all but~$g$ bits of~$Z$.
+The BIP32-Ed25519 paper~\cite{BIP32-Ed25519} uses $g=32$, so that $Z_{L}$ is 28 bytes.
 
-An Ed25519 scalar has 251 bits available for randomization (255, 254, 2, 1, 0 are fixed), with an additional bit (253) having to be 0 to avoid overflow. The level at which we can no longer guarantee 253 will be 0 forms an upper bound.
+An Ed25519 scalar has 251 bits available for randomization (bits 255, 254, 2, 1, 0 are fixed), i.e., it must be a multiple of 8 in the range $[2^{254},2^{255})$.
+Additionally,~\cite{BIP32-Ed25519} requires that the master scalar have bit 253 set to~0 to avoid overflow in the children, i.e., it must be less than $2^{254} + 2^{253}$.
+The level at which we can no longer guarantee that a child scalar meets the Ed25519 requirements determines the depth~$D$ (i.e., number of derivation levels) we can handle.
 
-Recall from \cref{subsec:the_28_left_bytes_of_z} that each $Z_L < 2^{256 - g}$ and is multiplied by 8. Root $a$ must also be less than $2^{254} + 2^{253}$. Define $d = log_2(D)$. The previous paragraph can thus be expressed as follows:
+Recall from \cref{subsec:the_28_bytes_of_z} that each $Z_L < 2^{256 - g}$ and is multiplied by 8, so all derived private-key scalars are multiples of 8.
+The root scalar $a < 2^{254} + 2^{253}$.
+Define $d = \log_2(D)$, where~$D$ is the number of derivation levels.
+Then a bound on any derived private-key scalar~$a'$ is
 \begin{align*}
-  a_D &< a + 8\cdot D\cdot2^{256 - g} \\
-  a_D &< a + D\cdot2^{259 - g} \\
-  a_D &< a + 2^{259 + d - g}\\
-  a_D < 2^{254} +& 2^{253} + 2^{259 + d - g} < 2^{254} + 2^{254}
+  a' &< a + 8\cdot D\cdot2^{256 - g} \\
+     &= a + D \cdot 2^{259 - g} \\
+     &= a + 2^{259 + d - g} \\
+     &< 2^{254} + 2^{253} + 2^{259 + d - g} .
 \end{align*}
-The relationship between $d$ and $g$ can be stated as:
-\begin{align*}
-  253 &> 259 + d - g \\
-  &\Downarrow \\
-  g &> d + 6
-\end{align*}
-
- $g = d + 6$ defines the first level at which the 3rd highest bit overflows into the 2nd highest bit, which is set to 1 already and would overflow into the highest bit. $d$ must necessarily be $d < g - 6$.
-
- As a result, the number of safe levels $S$ of derivation that can be performed is one level fewer than $D = 2^{d} < 2^{g - 6}$:
-
- \begin{equation*}
-  S = D - 1 = 2^{d} - 1
-  \end{equation*}
+So, in order to ensure that $a' < 2^{255}$, it suffices to set $g,d$ so that
+\[ g \geq d + 6 .
+\]
+By the above, this implies that $a' < 2^{254} + 2^{253} + 2^{253} = 2^{255}$, as needed.
 
 \begin{table}[h]
   \centering
-  \begin{tabular}{|c|c|c|c|}
-  \hline
-  g & d  & D & S  \\
-  \hline
-  8 & 2 & 4 & 3 \\
-  9 & 3 & 8 & 7 \\
-  16 & 10 & 1024 & 1023 \\
-  32 & 26 & 67108864 & 67108863  \\
-  \hline
+  \begin{tabular}{ccc}
+    \toprule
+    $g$ & $d$ & $D$ \\
+    \midrule
+    8 & 2 & 4 \\
+    9 & 3 & 8 \\
+    16 & 10 & 1024 \\
+    32 & 26 & 67108864 \\
+    \bottomrule
   \end{tabular}
-  \caption{Bits to randomize $g$ resulting in levels $D$. $S$ is the number of safe levels.}
-  \label{tab:g_and_d}
+  \caption{Number of bits~$g$ to randomize, and corresponding number of safe derivation levels~$D$.}\label{tab:g_and_d}
 \end{table}
 
-
 \Cref{tab:g_and_d} presents a selection of possible values.
-$g=8$ is the most secure and breaks at the byte boundary (256 bits - 8 bits = 31 bytes) but it results in only 3 levels of derivation - too few to satisfy the derivation schemes mentioned in \cref{subsec:hd_wallets}, which require 5.
+While $g=8$ is the most secure among these options, and breaks~$Z$ at the byte boundary ($256-8$ bits is 31 bytes), it gives only $D=4$ levels of derivation, which is too few to satisfy the derivation schemes mentioned in \cref{subsec:hd_wallets} (which require 5).
 
-$g=16$ is the next value that breaks at the byte boundary (equal to 30 bytes) and provides more than enough levels. It randomizes 240 out of the 251 bits available in an Ed25519 scalar.
+Similarly, $g=16$ is the next value that breaks at the byte boundary (30 bytes) and provides more than enough levels.
+However, it randomizes only 240 out of the 251 bits available in an Ed25519 scalar.
 
-$g=9$ is the most secure value that also allows for enough derivation levels, allowing for 7 levels of derivation. It randomizes 246 out of the 251 bits available in a Ed25519 scalar. The only downside is that it does not break at the byte boundary, requiring a bit of extra care when implementing.
+Finally, $g=9$ is the most secure value that also allows for enough derivation levels: up to 8.
+It randomizes 247 out of the 251 bits available in a Ed25519 scalar.
+A downside is that it does not break~$Z$ at the byte boundary, requiring a bit of extra care when implementing.
 
-It also becomes apparent that the recommended maximum level of depth in the BIP32-Ed25519 paper, $2^{20}$, is lower than the actual number of levels that can be performed without bit overflows breaking the scalar's Ed25519-compatibility: $2^{26} - 1$.
-
-Indeed, for $D=2^{20}$, $a_{D} \leq 2^{254} + 2^{253} + 2^{247} < 2^{254} + 2^{253} + 2^{227+26=253} = 2^{255}$.
-
+It also becomes apparent that the quoted maximum depth~$2^{20}$ from~\cite{BIP32-Ed25519} is smaller than the actual number of safe levels, which is at least $2^{26}$.
 
 \section{Implementations}
 
