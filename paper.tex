@@ -105,15 +105,14 @@ An alternate elliptic curve standard for digital signatures is Ed25519~\cite{Ed2
 
 Ed25519 has a number of advantages, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered~\cite{Ed25519}).
 
-Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits. RFC\-8032~\cite{RFC8032} specifies that of the 32 byte private key:
-
+Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits.
+RFC\-8032~\cite{RFC8032} specifies that of the 32-byte ``expanded'' private key:
 \begin{itemize}[label=\textendash, itemsep=-0.5em]
-  \item Bits 0, 1, 2:  set to 0, ensuring that the key is a multiple of 8 and avoiding small subgroup attacks.
-  \item Bit 254: set to 1, to ensuring the Montgommery ladder computation used in scalar multiplication runs in constant time.
-  \item Bit 255: set to 0, ensuring the key is in the range of the field order ($2^{255} - 19$).
+\item Bits 0, 1, 2 are set to 0, ensuring that the key is a multiple of 8, thus avoiding small-subgroup attacks.
+\item Bit 255 is set to 0, to ensure that the key is less than the order of the elliptic-curve group.
+\item Bit 254 is to 1, to ensure that the Montgomery ladder computation used in scalar multiplication runs in constant time.
 \end{itemize}
-
-By definition the key space for Ed25519 is non-linear.
+So, by definition, the key space for Ed25519 is non-linear.
 
 As a consequence of this fact, the SLIP10~\cite{SLIP10} standard decided to not support public key child derivation for Ed25519 keys. Only hardened key generation from private parent key to private child key is supported by it. This is, as of the time of writing, what Solana supports~\cite{SolanaBip32}. 
 
