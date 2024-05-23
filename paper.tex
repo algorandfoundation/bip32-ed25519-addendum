@@ -110,11 +110,15 @@ Note that all of the schemes listed above rely on five or fewer levels of deriva
 \subsection{Elliptic curves and their key spaces}
 \label{subsec:elliptic_curves_and_their_key_spaces}
 
-Bitcoin relies on the Secp256k1~\cite{Secp256k1} elliptic curve, which has a linear key space. A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys/scalars and $B$ the base point. This results in a new public key whose private key is $[x] + [k] \text{ mod } q$ for $q$ the order of the field.
+Bitcoin relies on the Secp256k1~\cite{Secp256k1} elliptic curve, which has a linear key space.
+A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys (scalars), and $B$ is the base point.
+This results in a new public key whose private key is $[x] + [k] \bmod q$, where $q$ is the order of the field.
 
-An alternate elliptic curve standard for digital signatures is Ed25519~\cite{Ed25519}. It is used by a number of blockchains such as Algorand~\cite{AlgorandEd25519}, Cardano~\cite{CardanoEd25519}, Monero~\cite{MoneroEd25519}, Nano~\cite{NanoEd25519}, Solana~\cite{SolanaEd25519} and more. Polkadot~\cite{PolkadotEd25519} uses a variant called Schnorrkel/Ristretto x25519 (``sr25519'') and Tezos~\cite{TezosEd25519} offers it alongside other curves.
+An alternative elliptic-curve standard for digital signatures is Ed25519~\cite{Ed25519}.
+It is used by a number of blockchains such as Algorand~\cite{AlgorandEd25519}, Cardano~\cite{CardanoEd25519}, Monero~\cite{MoneroEd25519}, Nano~\cite{NanoEd25519}, Solana~\cite{SolanaEd25519}, and more.
+Polkadot~\cite{PolkadotEd25519} uses a variant called Schnorrkel/Ristretto x25519 (``sr25519'') and Tezos~\cite{TezosEd25519} offers it alongside other curves.
 
-Ed25519 has a number of advantages, such as high speed constant-time implementations and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered~\cite{Ed25519}).
+Ed25519 has a number of advantages, such as high-speed constant-time implementations, and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered).
 
 Unfortunately, private keys have to be derived by hashing the seed and manipulating the bits.
 RFC\-8032~\cite{RFC8032} specifies that of the 32-byte ``expanded'' private key:
