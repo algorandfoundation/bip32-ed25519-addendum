@@ -129,17 +129,17 @@ RFC\-8032~\cite{RFC8032} specifies that in the 32-byte private key:
 \end{itemize}
 So, by definition, the key space for Ed25519 is non-linear relative to the group order.
 
-As a consequence of this fact, the SLIP10~\cite{SLIP10} standard decided to not support public key child derivation for Ed25519 keys. Only hardened key generation from private parent key to private child key is supported by it. This is, as of the time of writing, what Solana supports~\cite{SolanaBip32}. 
+As a consequence, the SLIP10~\cite{SLIP10} standard decided to not support public key child derivation for Ed25519 keys.
+Only hardened key generation from private parent key to private child key is supported by it.
+This is, as of the time of writing, what Solana supports~\cite{SolanaBip32}.
 
-In contrast, a paper that has seen recognition in the industry is BIP32-Ed25519
-Hierarchical Deterministic Keys over a Non-linear Keyspace~\cite{BIP32-Ed25519}. It extends the BIP32 standard to work with Ed25519 keys with public key child derivation.
-
+In contrast, a paper that has seen recognition in the industry is ``BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace''~\cite{BIP32-Ed25519}.
+It extends the BIP32 standard to work with Ed25519 keys with public-key child derivation.
 It has been adopted by Cardano, though conforming additionally with SLIP23~\cite{SLIP23} to derive the initial master Ed25519 key and chain code.
 
-While solving the problem (with only minor modifications to BIP32 and working with ``after-hash'' private keys of Ed25519)~\cite{BIP32-Ed25519}, certain decisions were made that result in unnecessary security degradation.
+While solving the problem (with only minor modifications to BIP32 and working with ``after-hash'' private keys of Ed25519)~\cite{BIP32-Ed25519}, it has certain design aspects that result in unnecessary security degradation.
 
 In this paper an improvement to their method is proposed that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys.
-
 
 \section{Security Review}
 
