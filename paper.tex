@@ -84,9 +84,9 @@ m / purpose' / coin_type' /
 The apostrophe in some fields indicates that the field is \emph{hardened}, meaning that the child key is derived in a way that prevents the child public key from being derived publicly from the parent public key, or the sibling keys of that child key.
 The derivation method is different for hardened keys, requiring the parent private key.
 
-Each level has $2^{32}$ possible values.
-When hardening a level, the most-significant bit is set to 1.
-Thus $[0, 2^{31})$ are reserved for non-hardened keys, and $[2^{31}, 2^{32})$ are reserved for hardened keys.
+There are $2^{32}$ possible values for the address index (\verb=key=).
+In a hardened index, the most-significant bit is set to 1.
+So, the interval $[0, 2^{31})$ is for non-hardened keys, and $[2^{31}, 2^{32})$ is for for hardened keys.
 
 The terms ``account'' and ``address'' are sometimes used interchangeably in casual conversation.
 However, in the HD wallet context, an address is the most basic unit, while an account represents a logical grouping of many addresses.
