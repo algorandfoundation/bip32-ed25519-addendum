@@ -1,0 +1,302 @@
+\title{BIP32-Ed25519++: A More Secure Hierarchical Deterministic Wallet Standard for Ed25519 Keys}
+
+\author{Chris Peikert}
+
+\newcommand{\abstractText}{\noindent
+
+}
+
+%%%%%%%%%%%%%%%%%
+% Configuration %
+%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt, a4paper, twocolumn]{article}
+\usepackage{microtype}
+\usepackage{xurl}
+\usepackage[sort&compress]{natbib}
+\usepackage{abstract}
+\renewcommand{\abstractnamefont}{\normalfont\bfseries}
+\renewcommand{\abstracttextfont}{\normalfont\small\itshape}
+\usepackage{amsmath} % Add this line to define the \text command
+\usepackage{titlesec}
+\usepackage[skip=10pt]{parskip}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+\titleformat*{\section}{\large\bfseries}
+\titleformat*{\subsection}{\normalsize\bfseries}
+
+% Any configuration that should be done before the end of the preamble:
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue}
+\usepackage[capitalize,nameinlink,noabbrev]{cleveref} % must load after hyperref
+
+\begin{document}
+
+%%%%%%%%%%%%
+% Abstract %
+%%%%%%%%%%%%
+
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \maketitle
+    \begin{abstract}
+      \abstractText Implementing BIP32-style Hierarchical Deterministic (HD) wallets for Ed25519 keys is a non-trivial task, due to the non-linear key space of Ed25519.
+      A proposal by Khovratovich and Law has seen adoption in the industry, but it has some security issues.
+      This paper proposes some small modifications that address those issues, at the cost of reducing the number of levels in the hierarchy.
+      \newline \newline
+    \end{abstract}
+  \end{@twocolumnfalse}
+]
+
+%%%%%%%%%%%
+% Article %
+%%%%%%%%%%%
+
+
+\section{Introduction}
+
+Blockchains rely on users to generate seed phrases that correspond to public/private keypairs for use in signing transactions on behalf of an address.
+
+In the basic case, a single seed phrase corresponds to a single address, requiring users to keep track of many seed phrases should they wish to use separate addresses for different application domains: e.g., making and receiving payments, holding NFTs, participating in a DAO, DeFi, gaming, etc.
+
+
+\subsection{Hierarchical Deterministic Wallets}
+\label{subsec:hd_wallets}
+
+Bitcoin Improvement Proposal 32 (BIP32~\cite{BIP32}) was introduced to provide users with a means to deterministically derive many public/private keypairs from a single secret seed, greatly easing the management of seed phrases.
+
+BIP43~\cite{BIP43} introduced the concept of a purpose field, claiming that the original BIP32 standard allowed for too many degrees of freedom and resulted in many wallet softwares which claimed to be BIP32 compatible but were ultimately incompatible with each other. BIP44~\cite{BIP44} took this a step further and defined 5 levels in the BIP32 path:
+\begin{verbatim}
+m / purpose' / coin_type' /
+    account' / change / key
+\end{verbatim}
+
+\begin{itemize}[label=\textendash, itemsep=-0.5em]
+  \item \verb=m=: master seed
+  \item \verb=purpose'=: derivation path scheme (e.g., 44')
+  \item \verb=coin_type'=: constant corresponding to the blockchain
+  \item \verb=account'=: user account
+  \item \verb=change=: 0 for external addresses, 1 for internal addresses
+  \item \verb=key=: address index
+\end{itemize}
+
+The apostrophe in some fields indicates that the field is \emph{hardened}, meaning that the child key is derived in a way that prevents the child public key from being derived publicly from the parent public key, or the sibling keys of that child key.
+The derivation method is different for hardened keys, requiring the parent private key.
+
+There are $2^{32}$ possible values for the address index (\verb=key=).
+In a hardened index, the most-significant bit is set to 1.
+So, the interval $[0, 2^{31})$ is for non-hardened keys, and $[2^{31}, 2^{32})$ is for for hardened keys.
+
+The terms ``account'' and ``address'' are sometimes used interchangeably in casual conversation.
+However, in the HD wallet context, an address is the most basic unit, while an account represents a logical grouping of many addresses.
+
+The \verb=change= field is used to differentiate between addresses used for receiving payments and addresses used for change in transactions, but this is more relevant for UTXO blockchains.
+Account-based blockchains like Algorand or Ethereum do not have this distinction, and can either set it to 0 or reserve it for other use.
+
+Since the indices and change levels are not hardened, but the account level is, it is possible to connect sibling addresses within an account by providing the extended public key produced at the account level.
+However, different accounts cannot be connected with each other should the extended public key at the \verb=coin_type= level be leaked.
+Similarly, hardening at the \verb=coin_type= level means that keys derived for one blockchain cannot be connected to keys derived for another blockchain.
+
+This class of wallets is known as Hierarchical Deterministic Wallets, or HD Wallets for short.
+
+Other derivation schemes exist as well, such as BIP49~\cite{BIP49} for P2SH nested SegWit addresses, and BIP84~\cite{BIP84} for native SegWit addresses. ZIP32~\cite{ZIP32}, a variant used by ZCash for their shielded addresses, does away with the change field completely.
+
+A complementary set of standards called SatoshiLab Improvement Protocols (SLIP) also exist, maintained by SatoshiLab (the creators of the Trezor hardware wallet) and come up in the context of BIP32 wallets.
+For example, SLIP10~\cite{SLIP10} or SLIP23~\cite{SLIP23}.
+SLIP44~\cite{BIP44} extended BIP44 to assign \verb=coin_type= values for blockchains other than Bitcoin mainnet and testnet, e.g. \verb=283'= for Algorand.
+
+Note that all of the schemes listed above rely on five or fewer levels of derivation.
+
+\subsection{Elliptic curves and their key spaces}
+\label{subsec:elliptic_curves_and_their_key_spaces}
+
+Bitcoin relies on the Secp256k1~\cite{Secp256k1} elliptic curve, which has a linear key space.
+A new public key can be formed by adding $[x]B$ to the public key $[k]B$, where $x$ and $k$ are private keys (scalars), and $B$ is the base point.
+This results in a new public key whose private key is $[x] + [k] \bmod q$, where $q$ is the order of the scalar field.
+
+An alternative elliptic-curve standard for digital signatures is Ed25519~\cite{Ed25519}.
+It is used by a number of blockchains such as Algorand~\cite{AlgorandEd25519}, Cardano~\cite{CardanoEd25519}, Monero~\cite{MoneroEd25519}, Nano~\cite{NanoEd25519}, Solana~\cite{SolanaEd25519}, and more.
+Polkadot~\cite{PolkadotEd25519} uses a variant called Schnorrkel/Ristretto x25519 (``sr25519'') and Tezos~\cite{TezosEd25519} offers it alongside other curves.
+
+Ed25519 has a number of advantages, such as high-speed constant-time implementations, and a signing procedure where the nonce is deterministically derived from the data to be signed (mitigating the kind of attack that Sony PS3 suffered).
+
+However, private keys in Ed25519 have to be derived by hashing a private ``seed'' and manipulating the bits.
+RFC\-8032~\cite{RFC8032} specifies that in the 32-byte private key:
+\begin{itemize}[label=\textendash, itemsep=-0.5em]
+\item Bits 0, 1, 2 are set to 0, ensuring that the key is a multiple of 8, thus avoiding small-subgroup attacks.
+\item Bit 255 is set to 0, to ensure that the key is less than the order of the elliptic-curve group.
+\item Bit 254 is set to 1, to ensure that the Montgomery ladder computation used in scalar multiplication runs in constant time.
+\end{itemize}
+So, by definition, the key space for Ed25519 is non-linear relative to the group order: the sum of two private keys (modulo the group order) is not necessarily a valid private key.
+
+As a consequence, the SLIP10~\cite{SLIP10} standard decided to not support public key child derivation for Ed25519 keys.
+Only hardened key generation from private parent key to private child key is supported by it.
+This is, as of the time of writing, what Solana supports~\cite{SolanaBip32}.
+
+In contrast, a paper that has seen recognition in the industry is ``BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace''~\cite{BIP32-Ed25519}.
+It extends the BIP32 standard to work with Ed25519 keys with public-key child derivation.
+It has been adopted by Cardano, though conforming additionally with SLIP23~\cite{SLIP23} to derive the initial master Ed25519 key and chain code.
+
+While solving the problem (with only minor modifications to BIP32 and working with ``after-hash'' private keys of Ed25519)~\cite{BIP32-Ed25519}, it has certain design aspects that result in unnecessary security degradation.
+
+This paper proposes an improvement to the method from~\cite{BIP32-Ed25519} that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels in the hierarchy of child keys.
+
+\section{Security Review}
+
+While reviewing the BIP32-Ed25519 paper~\cite{BIP32-Ed25519}, two issues were identified, the first minor and the other significant.
+
+\subsection{Discarding bad child private or public keys}
+
+When deriving a new private or public child key, it is possible to produce a child that is unsafe to use, in the following two cases:
+\begin{itemize}[label=\textendash, itemsep=-0.5em]
+\item $k_L$ is divisible by the order of the base point,
+\item $A_i$ is the identity point.
+\end{itemize}
+
+The paper states that if either of these happen, the child must be discarded.
+However, it does not give instructions on how to proceed with the derivation.
+For example, an implementer could mark the index as forbidden and simply increment the child index.
+However, depending on the level, if the user were to publish the extended public key and others were to derive the same faulty child key, the security of the parent key would be degraded.
+
+Fortunately, it is extremely unlikely that either case will happen, based on the security of the hash function used for derivation.
+
+\subsection{The 28 bytes of Z}
+\label{subsec:the_28_bytes_of_z}
+
+As mentioned in \cref{subsec:elliptic_curves_and_their_key_spaces}, for Ed25519 private-keys scalars, one must ensure that bits 0, 1, 2, 3 and 255 are 0, and that bit 254 is 1.
+The method proposed in~\cite{BIP32-Ed25519} for ensuring this is to produce the child private key and public key as follows.
+
+Derive $Z$ from either the parent's public key $A^{P}$ or parent's private key $k^{P}$, depending on whether the child is hardened or not:
+\[ Z \leftarrow
+  \begin{cases} 
+    F_{c^P}(\mathtt{0x02} \| A^P \| i) & i \in  [0, 2^{31}) \\
+    F_{c^P}(\mathtt{0x00} \| k^P \| i) & i \in [2^{31}, 2^{32}) .
+  \end{cases} \]
+Then truncate the 32-byte $Z$ to 28 bytes (224 bits): $Z_L \leftarrow Z_{[:224]}$.
+
+Depending on hardening, calculate the child private key (scalar) or public key (which corresponds to an address on the blockchain):
+\begin{align*}
+  k_L &\leftarrow \langle 8[Z_L]  + [k_L^P]\rangle \\
+  A_i &\leftarrow A^P + [8Z_L]B .
+\end{align*}
+Here~$B$ is the base point of the curve, and~$i$ is a little-endian 4-byte string.
+
+The calculations of~$k_R$ (which is necessary to produce the full private key $k = (k_L, k_R)$) and the child chain code $c_i$ (which is necessary to serve as the key for the HMAC-512 function~$F$, and is part of the extended public key $(A_i, c_i)$) have been omitted for brevity.
+
+By truncating $Z$ to 28 bytes and then multiplying by 8, the authors ensure that the scalar is a multiple of 8 and that bit 255 is 0.
+When $k_L^P$ is added, it contributes a 1 at bit 254.
+
+Note that as part of the initial conversion from seed to master key $\tilde{k}$, only those $\tilde{k}$ that produce a $k_L$ with bit 253 set to 0 are admitted.
+This prevents overflow when adding, which would affect bit 254.
+As a result, the child private-key scalars are guaranteed to meet the requirements of Ed25519, for many levels of derivation.
+
+To understand how many levels can be safely derived, consider that the root key~$a$ can be expressed as $a = 2^{254} + 8b < 2^{254} + 2^{253}$, where $b < 2^{250}$ due to the bit manipulation and the way it is generated.
+
+At the next level, $a_{1} = a + 8[Z_L] < 2^{254} + 2^{253} + 8 \cdot 2^{224} = 2^{254} + 2^{253} + 2^{227}$.
+
+At the next level, $a_{2} = a_{1} + 8[Z_L] < 2^{254} + 2^{253} + 2^{227} + 2^{227} = 2^{254} + 2^{253} + 2^{228}$.
+
+At the next level, $a_{3} = a_{2} + 8[Z_L] < 2^{254} + 2^{253} + 2^{228} + 2^{227}$.
+
+In short, the key at depth~$D$ (called~$j$ in the paper) satisfies the inequality $a_D < a + D\cdot2^{227} < 2^{254} + 2^{253} + D\cdot2^{227}$.
+
+The paper specifies $D \leq 2^{20}$, allowing for a maximum 1048576 levels of derivation, so that $a_{D} < 2^{254} + 2^{253} + 2^{247}$, a form that is compatible with the Ed25519 requirements.
+
+Unfortunately, offering this many levels comes at a cost: only 28 bytes (224 bits) of randomization takes place for each level.
+
+Consider the scenario where a single child private key is compromised.
+The security of its parent key would degrade to around only $\sqrt{2^{224}}=2^{112}$ due to standard rho/Kangaroo attacks, below the 128 bits of security offered by Ed25519.
+This contradicts the authors' claims that no loss of security occurs as a result of their method.
+
+In other words, computing the parent key may become more than 64,000 times ($\sqrt{2^{32}}=2^{16}$) easier for the attacker as a result of doing away with 4 bytes of entropy.
+
+If many sibling private keys are compromised, the parent key's security is degraded even further. And the same applies to further ancestors, up to the root private key.
+
+\section{Improving the BIP32-Ed25519 Standard}
+
+The purpose of our modifications is to add more randomization to child keys, so that there is less security degradation if some private keys are compromised.
+
+We introduce a positive integer parameter~$g$, and instead define $Z_L = Z_{[:256-g]}$ to be all but~$g$ bits of~$Z$.
+The BIP32-Ed25519 paper~\cite{BIP32-Ed25519} uses $g=32$, so that $Z_{L}$ is 28 bytes.
+
+An Ed25519 scalar has 251 bits available for randomization (bits 255, 254, 2, 1, 0 are fixed), i.e., it must be a multiple of 8 in the range $[2^{254},2^{255})$.
+Additionally,~\cite{BIP32-Ed25519} requires that the master scalar have bit 253 set to~0 to avoid overflow in the children, i.e., it must be less than $2^{254} + 2^{253}$.
+The level at which we can no longer guarantee that a child scalar meets the Ed25519 requirements determines the depth~$D$ (i.e., number of derivation levels) we can handle.
+
+Recall from \cref{subsec:the_28_bytes_of_z} that each $Z_L < 2^{256 - g}$ and is multiplied by 8, so all derived private-key scalars are multiples of 8.
+The root scalar $a < 2^{254} + 2^{253}$.
+Define $d = \log_2(D)$, where~$D$ is the number of derivation levels.
+Then a bound on any derived private-key scalar~$a'$ is
+\begin{align*}
+  a' &< a + 8\cdot D\cdot2^{256 - g} \\
+     &= a + D \cdot 2^{259 - g} \\
+     &= a + 2^{259 + d - g} \\
+     &< 2^{254} + 2^{253} + 2^{259 + d - g} .
+\end{align*}
+So, in order to ensure that $a' < 2^{255}$, it suffices to set $g,d$ so that
+\[ g \geq d + 6 .
+\]
+By the above, this implies that $a' < 2^{254} + 2^{253} + 2^{253} = 2^{255}$, as needed.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{ccc}
+    \toprule
+    $g$ & $d$ & $D$ \\
+    \midrule
+    8 & 2 & 4 \\
+    9 & 3 & 8 \\
+    16 & 10 & 1024 \\
+    32 & 26 & 67108864 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Number of bits~$g$ to randomize, and corresponding number of safe derivation levels~$D$.}\label{tab:g_and_d}
+\end{table}
+
+\Cref{tab:g_and_d} presents a selection of possible values.
+While $g=8$ is the most secure among these options, and breaks~$Z$ at the byte boundary ($256-8$ bits is 31 bytes), it gives only $D=4$ levels of derivation, which is too few to satisfy the derivation schemes mentioned in \cref{subsec:hd_wallets} (which require 5).
+
+Similarly, $g=16$ is the next value that breaks at the byte boundary (30 bytes), and it provides more than enough levels.
+However, it randomizes only 240 out of the 251 bits available in an Ed25519 scalar.
+
+Finally, $g=9$ is the most secure value that also allows for enough derivation levels: up to 8.
+It randomizes 247 out of the 251 bits available in a Ed25519 scalar.
+A downside is that it does not break~$Z$ at the byte boundary, requiring a bit of extra care when implementing.
+
+From this more general setup it is also apparent that the quoted maximum depth~$2^{20}$ from~\cite{BIP32-Ed25519} is smaller than the actual number of safe levels, which is at least $2^{26}$.
+
+\section{Implementations}
+
+
+The suggestions provided in this paper have been implemented as part of the ARC52 Bip32-Ed25519 libraries provided by the Algorand Foundation~\cite{AF}.
+
+\begin{itemize}
+  \item \href{https://github.com/algorandfoundation/bip32-ed25519-kotlin}{Kotlin}
+  \item \href{https://github.com/algorandfoundation/bip32-ed25519-swift}{Swift}
+  \item \href{https://github.com/ehanoc/ARCs/tree/wallet-api-context/assets/arc-0052}{TypeScript}
+\end{itemize}
+
+
+\section{Conclusion}
+
+In this paper a modification to the BIP32-Ed25519 standard has been presented that provides a more secure way to derive Ed25519 keys, at the cost of reducing the number of levels of child keys. We have shown that this modification provides a significant improvement in security, while still providing a sufficient number of child keys for most applications.
+
+In particular, setting $g=9$ allows for the most secure implementation that also satisfies the requirements of Ed25519 and the most common derivation schemes.
+
+We have also provided implementations of this modification in several programming languages. We hope that this modification will be adopted by the wider community and help to improve the security of Ed25519-based hierarchical deterministic wallets.
+
+%%%%%%%%%%%%%%
+% References %
+%%%%%%%%%%%%%%
+
+\nocite{*}
+\bibliographystyle{unsrt}
+\bibliography{sources}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
