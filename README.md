@@ -1,6 +1,6 @@
-# Addendum to BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace
+# BIP32-Ed25519++: A More Secure Hierarchical Deterministic Wallet Standard for Ed25519 Keys
 
-Repository containing the LaTeX files for the addendum/review to BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace.
+Repository containing the LaTeX files for the addendum/review to BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace, titled BIP32-Ed25519++: A More Secure Hierarchical Deterministic Wallet Standard for Ed25519 Keys.
 
 ## Implementations
 
