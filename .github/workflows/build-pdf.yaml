@@ -22,19 +22,8 @@ jobs:
         with:
           name: PDF
           path: paper.pdf
-
-  create_release:
-    needs: build_latex
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: PDF
-          path: .
-
-      - name: Release
+      - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.run_number }}
